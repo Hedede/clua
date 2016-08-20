@@ -1260,10 +1260,18 @@ static void whilestat (LexState *ls, int line) {
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
   enterblock(fs, &bl, 1);
-  checknext(ls, TK_DO);
-  block(ls);
+  int isblock = testnext(ls, '{');
+
+  if (isblock)
+    block(ls);
+  else
+    statblock(ls);
+
   luaK_jumpto(fs, whileinit);
-  check_match(ls, TK_END, TK_WHILE, line);
+
+  if (isblock)
+    check_match(ls, '}', TK_WHILE, line);
+
   leaveblock(fs);
   luaK_patchtohere(fs, condexit);  /* false conditions finish the loop */
 }
