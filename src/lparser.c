@@ -1099,6 +1099,15 @@ static void block (LexState *ls) {
   leaveblock(fs);
 }
 
+static void statblock (LexState *ls) {
+  /* block -> statement */
+  FuncState *fs = ls->fs;
+  BlockCnt bl;
+  enterblock(fs, &bl, 0);
+  statement(ls);
+  leaveblock(fs);
+}
+
 
 /*
 ** structure to chain all variables in the left-hand side of an
@@ -1297,13 +1306,26 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   FuncState *fs = ls->fs;
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
-  checknext(ls, TK_DO);
+
+  int brace_line = ls->linenumber;
+
+  _Bool isblock = testnext(ls, '{');
+
   prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
-  block(ls);
+
+  if (isblock)
+    block(ls);
+  else
+    statblock(ls);
+
   leaveblock(fs);  /* end of scope for declared variables */
+
+  if (isblock)
+    check_match(ls, '}', '{', brace_line);
+
   luaK_patchtohere(fs, prep);
   if (isnum)  /* numeric for? */
     endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
@@ -1377,7 +1399,6 @@ static void forstat (LexState *ls, int line) {
     case ',': case TK_IN: forlist(ls, varname); break;
     default: luaX_syntaxerror(ls, "'=' or 'in' expected");
   }
-  check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
 }
 
