@@ -584,8 +584,7 @@ static void close_func (LexState *ls) {
 */
 static int block_follow (LexState *ls, int withuntil) {
   switch (ls->t.token) {
-    case TK_ELSE: case TK_ELSEIF:
-    case TK_END: case TK_EOS: case '}':
+    case TK_ELSE: case TK_ELSEIF: case '}': case TK_EOS:
       return 1;
     case TK_UNTIL: return withuntil;
     default: return 0;
@@ -1587,10 +1586,17 @@ static void statement (LexState *ls) {
       whilestat(ls, line);
       break;
     }
-    case TK_DO: {  /* stat -> DO block END */
+    case TK_DO: {  /* stat -> DO { block } */
       luaX_next(ls);  /* skip DO */
-      block(ls);
-      check_match(ls, TK_END, TK_DO, line);
+      _Bool isblock = testnext(ls, '{');
+
+      if (isblock) {
+        block(ls);
+        check_match(ls, '}', TK_DO, line);
+      } else {
+        statblock(ls);
+      }
+
       break;
     }
     case TK_FOR: {  /* stat -> forstat */
