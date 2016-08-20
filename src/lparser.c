@@ -584,7 +584,7 @@ static void close_func (LexState *ls) {
 */
 static int block_follow (LexState *ls, int withuntil) {
   switch (ls->t.token) {
-    case TK_ELSE: case TK_ELSEIF: case '}': case TK_EOS:
+    case TK_ELSE: case '}': case TK_EOS:
       return 1;
     case TK_UNTIL: return withuntil;
     default: return 0;
@@ -1446,8 +1446,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
     testnext(ls, ';');  /* skip optional semicolon */
   }
   leaveblock(fs);
-  if (ls->t.token == TK_ELSE ||
-      ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
+  if (ls->t.token == TK_ELSE)  /* followed by 'else'/'elseif'? */
     luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
   luaK_patchtohere(fs, jf);
 }
@@ -1458,10 +1457,14 @@ static void ifstat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   int escapelist = NO_JUMP;  /* exit list for finished parts */
   test_then_block(ls, &escapelist);  /* IF cond THEN block */
-  while (ls->t.token == TK_ELSEIF)
-    test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
-  if (testnext(ls, TK_ELSE))
-    block(ls);  /* 'else' part */
+  while (ls->t.token == TK_ELSE) {
+    if (ls->t.token == TK_IF) {
+      test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
+    } else {
+      block(ls);  /* 'else' part */
+      break;
+    }
+  }
   luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
 }
 

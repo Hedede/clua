@@ -18,14 +18,24 @@ function tost(bool)
 
 	if (bool == 3)
 		print("3");
-	elseif (bool ~= 2) {
+	else if (bool == 2) {
 		print("zoz");
+	} else
+	if (bool == 1) {
+		print("adin");
+	} else {
+		print("zero");
+		zz[4] = #zz
 	}
 }
 
+print("--------");
 test({"asd"});
+print("--------");
 tost(0);
+print("--------");
 tost(5);
+print("--------");
 
 for (i=1,#zz) {
 	print(zz[i]);
