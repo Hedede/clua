@@ -1315,8 +1315,6 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
 
-  int brace_line = ls->linenumber;
-
   _Bool isblock = testnext(ls, '{');
 
   prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
@@ -1332,7 +1330,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   leaveblock(fs);  /* end of scope for declared variables */
 
   if (isblock)
-    check_match(ls, '}', '{', brace_line);
+    check_match(ls, '}', TK_FOR, line);
 
   luaK_patchtohere(fs, prep);
   if (isnum)  /* numeric for? */
