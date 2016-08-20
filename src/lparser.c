@@ -1103,12 +1103,10 @@ static void block (LexState *ls) {
 
   BlockCnt bl;
 
-  int line = ls->linenumber;
-  _Bool isblock = testnext(ls, '{');
-
   enterblock(fs, &bl, 0);
 
-  if (isblock) {
+  int line = ls->linenumber;
+  if (testnext(ls, '{')) {
     statlist(ls);
     check_match(ls, '}', '{', line);
   } else {
@@ -1288,7 +1286,14 @@ static void repeatstat (LexState *ls, int line) {
   enterblock(fs, &bl1, 1);  /* loop block */
   enterblock(fs, &bl2, 0);  /* scope block */
   luaX_next(ls);  /* skip REPEAT */
-  statlist(ls);
+
+  int bl_line = ls->linenumber;
+  if (testnext(ls, '{')) {
+    statlist(ls);
+    check_match(ls, '}', '{', bl_line);
+  } else {
+    statement(ls);
+  }
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   condexit = cond(ls);  /* read condition (inside scope block) */
   if (bl2.upval)  /* upvalues? */
