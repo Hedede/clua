@@ -1090,20 +1090,23 @@ static void expr (LexState *ls, expdesc *v) {
 
 
 static void block (LexState *ls) {
-  /* block -> statlist */
+  /* block -> '{' statlist '}' | statement  */
   FuncState *fs = ls->fs;
-  BlockCnt bl;
-  enterblock(fs, &bl, 0);
-  statlist(ls);
-  leaveblock(fs);
-}
 
-static void statblock (LexState *ls) {
-  /* block -> statement */
-  FuncState *fs = ls->fs;
   BlockCnt bl;
+
+  int line = ls->linenumber;
+  _Bool isblock = testnext(ls, '{');
+
   enterblock(fs, &bl, 0);
-  statement(ls);
+
+  if (isblock) {
+    statlist(ls);
+    check_match(ls, '}', '{', line);
+  } else {
+    statement(ls);
+  }
+
   leaveblock(fs);
 }
 
@@ -1258,20 +1261,12 @@ static void whilestat (LexState *ls, int line) {
   luaX_next(ls);  /* skip WHILE */
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
+
   enterblock(fs, &bl, 1);
-  int isblock = testnext(ls, '{');
-
-  if (isblock)
-    block(ls);
-  else
-    statblock(ls);
-
+  block(ls);
   luaK_jumpto(fs, whileinit);
-
-  if (isblock)
-    check_match(ls, '}', TK_WHILE, line);
-
   leaveblock(fs);
+
   luaK_patchtohere(fs, condexit);  /* false conditions finish the loop */
 }
 
@@ -1314,22 +1309,12 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
 
-  _Bool isblock = testnext(ls, '{');
-
   prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
-
-  if (isblock)
-    block(ls);
-  else
-    statblock(ls);
-
+  block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
-
-  if (isblock)
-    check_match(ls, '}', TK_FOR, line);
 
   luaK_patchtohere(fs, prep);
   if (isnum)  /* numeric for? */
@@ -1588,15 +1573,7 @@ static void statement (LexState *ls) {
     }
     case TK_DO: {  /* stat -> DO { block } */
       luaX_next(ls);  /* skip DO */
-      _Bool isblock = testnext(ls, '{');
-
-      if (isblock) {
-        block(ls);
-        check_match(ls, '}', TK_DO, line);
-      } else {
-        statblock(ls);
-      }
-
+      block(ls);
       break;
     }
     case TK_FOR: {  /* stat -> forstat */
