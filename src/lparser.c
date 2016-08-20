@@ -865,6 +865,14 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
 ** =======================================================================
 */
 
+static void parenexp (LexState *ls, expdesc* v) {
+  int line = ls->linenumber;
+  checknext(ls, '(');
+  expr(ls, v);
+  check_match(ls, ')', '(', line);
+  luaK_dischargevars(ls->fs, v);
+}
+
 
 static void primaryexp (LexState *ls, expdesc *v) {
   /* primaryexp -> NAME | '(' expr ')' */
@@ -1191,7 +1199,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
 static int cond (LexState *ls) {
   /* cond -> exp */
   expdesc v;
-  expr(ls, &v);  /* read condition */
+  parenexp(ls, &v);  /* read condition */
   if (v.k == VNIL) v.k = VFALSE;  /* 'falses' are all equal here */
   luaK_goiftrue(ls->fs, &v);
   return v.f;
@@ -1400,7 +1408,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
-  expr(ls, &v);  /* read condition */
+  parenexp(ls, &v);  /* read condition */
 
   int line = ls->linenumber;
   _Bool isblock = testnext(ls, '{');
