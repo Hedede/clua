@@ -1342,7 +1342,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
 }
 
 
-static void fornum (LexState *ls, TString *varname, int line) {
+static void fornum (LexState *ls, TString *varname, int line, int pline) {
   /* fornum -> NAME = exp1,exp1[,exp1] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
@@ -1360,11 +1360,12 @@ static void fornum (LexState *ls, TString *varname, int line) {
     luaK_codek(fs, fs->freereg, luaK_intK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
+  check_match(ls, ')', '(', pline);
   forbody(ls, base, line, 1, 1);
 }
 
 
-static void forlist (LexState *ls, TString *indexname) {
+static void forlist (LexState *ls, TString *indexname, int pline) {
   /* forlist -> NAME {,NAME} IN explist forbody */
   FuncState *fs = ls->fs;
   expdesc e;
@@ -1385,6 +1386,7 @@ static void forlist (LexState *ls, TString *indexname) {
   line = ls->linenumber;
   adjust_assign(ls, 3, explist(ls, &e), &e);
   luaK_checkstack(fs, 3);  /* extra space to call generator */
+  check_match(ls, ')', '(', pline);
   forbody(ls, base, line, nvars - 3, 0);
 }
 
@@ -1396,10 +1398,12 @@ static void forstat (LexState *ls, int line) {
   BlockCnt bl;
   enterblock(fs, &bl, 1);  /* scope for loop and control variables */
   luaX_next(ls);  /* skip 'for' */
+  int pline = ls->linenumber;
+  checknext(ls, '(');
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
-    case '=': fornum(ls, varname, line); break;
-    case ',': case TK_IN: forlist(ls, varname); break;
+    case '=': fornum(ls, varname, line, pline); break;
+    case ',': case TK_IN: forlist(ls, varname, pline); break;
     default: luaX_syntaxerror(ls, "'=' or 'in' expected");
   }
   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
